@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Opportunity Radar - Sign Up</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Opportunity Radar</h1>
+  <p class="subtitle">Find hackathons, internships, and competitions matched to you.</p>
+
+  <nav>
+    <a href="signup.html">Sign Up</a>
+    <a href="matches.html">Find Matches</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+
+  <div class="panel">
+    <h2>New here? Sign up</h2>
+    <input type="text" id="name" placeholder="Full name" />
+    <input type="email" id="email" placeholder="Email" />
+    <input type="text" id="year" placeholder="Year (e.g. 3rd year)" />
+    <input type="text" id="skills" placeholder="Skills (comma-separated, e.g. python,sql)" />
+    <button onclick="signup()">Sign Up</button>
+    <p id="signupResult"></p>
+  </div>
+
+  <script>
+    async function signup() {
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const year = document.getElementById("year").value;
+      const skills = document.getElementById("skills").value;
+      const resultEl = document.getElementById("signupResult");
+
+      if (!name || !email || !year || !skills) {
+        resultEl.innerHTML = "Please fill in all fields.";
+        return;
+      }
+
+      resultEl.innerHTML = "Signing up...";
+
+      try {
+        const params = new URLSearchParams({ name, email, year, skills });
+        const response = await fetch(`http://127.0.0.1:8000/students?${params}`, {
+          method: "POST"
+        });
+        const data = await response.json();
+
+        resultEl.innerHTML = `Signed up! Your student ID is <strong>${data.id}</strong>. Go to <a href="matches.html">Find Matches</a> and enter this ID.`;
+      } catch (err) {
+        resultEl.innerHTML = "Signup failed. Is the backend running?";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Opportunity Radar - Matches</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Opportunity Radar</h1>
+  <p class="subtitle">Find hackathons, internships, and competitions matched to you.</p>
+
+  <nav>
+    <a href="signup.html">Sign Up</a>
+    <a href="matches.html">Find Matches</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+
+  <div class="panel">
+    <h2>Find your matches</h2>
+    <input type="number" id="studentId" placeholder="Your student ID" />
+    <button onclick="loadMatches()">Find Matches</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    async function loadMatches() {
+      const studentId = document.getElementById("studentId").value;
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "Loading...";
+
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/students/${studentId}/matches`);
+        const data = await response.json();
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<p>${data.error}</p>`;
+          return;
+        }
+
+        resultsDiv.innerHTML = `<h2>Matches for ${data.student}</h2>`;
+        data.matches.forEach(match => {
+          let level = "low";
+          if (match.match_score >= 0.6) level = "high";
+          else if (match.match_score >= 0.3) level = "medium";
+
+          resultsDiv.innerHTML += `
+            <div class="match-card ${level}">
+              <h3>${match.title}</h3>
+              <p class="meta"><span class="badge">${match.type}</span> &nbsp; Deadline: ${match.deadline}</p>
+              <p class="score ${level}">Match Score: ${Math.round(match.match_score * 100)}%</p>
+              <p class="breakdown">Skill fit: ${Math.round(match.skill_score * 100)}% &nbsp; | &nbsp; Urgency: ${Math.round(match.urgency_score * 100)}%</p>
+            </div>
+          `;
+        });
+      } catch (err) {
+        resultsDiv.innerHTML = "Error loading matches. Is the backend server running?";
+      }
+    }
+  </script>
+</body>
+</html>

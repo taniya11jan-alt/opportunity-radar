@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Opportunity Radar - Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Opportunity Radar</h1>
+  <p class="subtitle">Admin panel</p>
+
+  <nav>
+    <a href="signup.html">Sign Up</a>
+    <a href="matches.html">Find Matches</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+
+  <div class="panel">
+    <h2>Add a new opportunity</h2>
+    <input type="text" id="oppTitle" placeholder="Title" />
+    <input type="text" id="oppType" placeholder="Type (hackathon/internship/competition)" />
+    <input type="text" id="oppSkills" placeholder="Required skills (comma-separated)" />
+    <input type="text" id="oppDeadline" placeholder="Deadline (YYYY-MM-DD)" />
+    <button onclick="addOpportunity()">Add Opportunity</button>
+    <p id="addOppResult"></p>
+  </div>
+
+  <script>
+    async function addOpportunity() {
+      const title = document.getElementById("oppTitle").value;
+      const type = document.getElementById("oppType").value;
+      const skills = document.getElementById("oppSkills").value;
+      const deadline = document.getElementById("oppDeadline").value;
+      const resultEl = document.getElementById("addOppResult");
+
+      if (!title || !type || !skills || !deadline) {
+        resultEl.innerHTML = "Please fill in all fields.";
+        return;
+      }
+
+      resultEl.innerHTML = "Adding...";
+
+      try {
+        const params = new URLSearchParams({ title, type, skills, deadline });
+        const response = await fetch(`http://127.0.0.1:8000/opportunities?${params}`, {
+          method: "POST"
+        });
+        const data = await response.json();
+
+        resultEl.innerHTML = `Added "${data.title}" successfully!`;
+        document.getElementById("oppTitle").value = "";
+        document.getElementById("oppType").value = "";
+        document.getElementById("oppSkills").value = "";
+        document.getElementById("oppDeadline").value = "";
+      } catch (err) {
+        resultEl.innerHTML = "Failed to add opportunity. Is the backend running?";
+      }
+    }
+  </script>
+</body>
+</html>

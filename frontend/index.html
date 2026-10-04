@@ -117,6 +117,16 @@
     <button onclick="loadMatches()">Find Matches</button>
   </div>
 
+  <div class="panel">
+  <h2>Admin: Add a new opportunity</h2>
+  <input type="text" id="oppTitle" placeholder="Title" /><br><br>
+  <input type="text" id="oppType" placeholder="Type (hackathon/internship/competition)" /><br><br>
+  <input type="text" id="oppSkills" placeholder="Required skills (comma-separated)" /><br><br>
+  <input type="text" id="oppDeadline" placeholder="Deadline (YYYY-MM-DD)" /><br><br>
+  <button onclick="addOpportunity()">Add Opportunity</button>
+  <p id="addOppResult"></p>
+</div>
+
   <div id="results"></div>
 
   <script>
@@ -147,6 +157,39 @@
         resultEl.innerHTML = "Signup failed. Is the backend running?";
       }
     }
+
+    async function addOpportunity() {
+  const title = document.getElementById("oppTitle").value;
+  const type = document.getElementById("oppType").value;
+  const skills = document.getElementById("oppSkills").value;
+  const deadline = document.getElementById("oppDeadline").value;
+  const resultEl = document.getElementById("addOppResult");
+
+  if (!title || !type || !skills || !deadline) {
+    resultEl.innerHTML = "Please fill in all fields.";
+    return;
+  }
+
+  resultEl.innerHTML = "Adding...";
+
+  try {
+    const params = new URLSearchParams({ title, type, skills, deadline });
+    const response = await fetch(`http://127.0.0.1:8000/opportunities?${params}`, {
+      method: "POST"
+    });
+    const data = await response.json();
+
+    resultEl.innerHTML = `Added "${data.title}" successfully!`;
+
+    // Clear the form
+    document.getElementById("oppTitle").value = "";
+    document.getElementById("oppType").value = "";
+    document.getElementById("oppSkills").value = "";
+    document.getElementById("oppDeadline").value = "";
+  } catch (err) {
+    resultEl.innerHTML = "Failed to add opportunity. Is the backend running?";
+  }
+}
 
     async function loadMatches() {
       const studentId = document.getElementById("studentId").value;

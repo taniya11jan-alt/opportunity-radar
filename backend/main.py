@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 from models import Opportunity, Student
-from matching import calculate_match_score
+from matching import calculate_final_score
 
 # Create the database tables (runs once, safe to leave in)
 Base.metadata.create_all(bind=engine)
@@ -63,19 +63,17 @@ def get_matches(student_id: int, db: Session = Depends(get_db)):
 
     results = []
     for opp in opportunities:
-        score = calculate_match_score(student.skills, opp.skills)
+        scores = calculate_final_score(student.skills, opp.skills, opp.deadline)
         results.append({
             "opportunity_id": opp.id,
             "title": opp.title,
             "type": opp.type,
             "deadline": opp.deadline,
-            "match_score": score
+            "skill_score": scores["skill_score"],
+            "urgency_score": scores["urgency_score"],
+            "match_score": scores["final_score"]
         })
 
-    # Sort by match_score, highest first
     results.sort(key=lambda x: x["match_score"], reverse=True)
 
-    return {
-        "student": student.name,
-        "matches": results
-    }
+    return {"student": student.name, "matches": results}

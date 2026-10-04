@@ -88,6 +88,11 @@
     font-weight: bold;
     font-size: 14px;
   }
+  .breakdown {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
   .score.high { color: #22a35e; }
   .score.medium { color: #c78a00; }
   .score.low { color: #999; }
@@ -168,6 +173,7 @@
       <h3>${match.title}</h3>
       <p class="meta"><span class="badge">${match.type}</span> &nbsp; Deadline: ${match.deadline}</p>
       <p class="score ${level}">Match Score: ${Math.round(match.match_score * 100)}%</p>
+      <p class="breakdown">Skill fit: ${Math.round(match.skill_score * 100)}% &nbsp; | &nbsp; Urgency: ${Math.round(match.urgency_score * 100)}%</p>
     </div>
   `;
 });

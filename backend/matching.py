@@ -7,8 +7,14 @@ def calculate_skill_score(student_skills: str, opportunity_skills: str) -> float
     if not opportunity_set:
         return 0.0
 
-    overlap = student_set.intersection(opportunity_set)
-    score = len(overlap) / len(opportunity_set)
+    matched = 0
+    for opp_skill in opportunity_set:
+        for student_skill in student_set:
+            if student_skill in opp_skill or opp_skill in student_skill:
+                matched += 1
+                break  # count this opportunity skill only once, even if multiple student skills match it
+
+    score = matched / len(opportunity_set)
     return round(score, 2)
 
 

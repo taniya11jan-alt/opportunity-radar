@@ -25,8 +25,8 @@ def parse_deadline(date_range_text):
 
         # If the end part starts with a digit, it has no month: borrow it from the start
         if end_part[0].isdigit():
-            month = start_part.split()[0]          # "Oct"
-            end_part = f"{month} {end_part}"       # "Oct 10, 2026"
+            month = start_part.split()[0]
+            end_part = f"{month} {end_part}"
 
         parsed = datetime.strptime(end_part, "%b %d, %Y")
         return parsed.strftime("%Y-%m-%d")

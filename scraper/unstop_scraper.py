@@ -9,18 +9,34 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from skill_map import expand_skills
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from database import SessionLocal
 from models import Opportunity
+from skill_map import expand_skills
 
-URL = "https://unstop.com/internship?oppstatus=open"
+# ---------- Settings ----------
+OPP_TYPE = "hackathon"      # "internship" or "hackathon"
 HEADLESS = False
-DRY_RUN = False   # set to False to actually save to the database
+DRY_RUN = False              
 
+URL = f"https://unstop.com/{'internship' if OPP_TYPE == 'internship' else 'hackathons'}?oppstatus=open"
+
+# Labels that are not skills
 NOT_SKILLS = {"fresher", "management", "postgraduate", "undergraduate",
-              "graduate", "experienced"}
+              "graduate", "experienced", "everyone can apply",
+              "engineering students", "pre-placement offers",
+              "quizzes & treasure hunt", "learning & development",
+              "law", "medical"}
+
+# Hand-written heuristic: turns broad tags into skills students actually list
+TAG_EXPAND = {
+    "software development": ["programming", "python", "java"],
+    "devops": ["docker", "git", "linux"],
+    "cyber security": ["security", "networking"],
+    "security engineering": ["security"],
+    "robotics engineer": ["robotics", "embedded systems"],
+}
 
 
 def parse_days_left(text):
@@ -58,6 +74,7 @@ try:
 except Exception:
     print("Cards never appeared. Page title:", driver.title)
 
+# One listing page per run: scroll to render more cards, no paging
 for _ in range(3):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
@@ -79,17 +96,28 @@ for r in raw:
     if days is None or not r["title"].strip():
         continue
 
+    # Clean the tags
     tags = [s.strip() for s in r["skills"].split("\n") if s.strip()]
     tags = [s for s in tags if s.lower() not in NOT_SKILLS
             and not is_salary(s) and not re.fullmatch(r"\+\d+", s)]
 
-    role = title_to_skill(r["title"])
-    skills = [role] + expand_skills(role) + [t.lower() for t in tags]
-    skills = list(dict.fromkeys(s for s in skills if s))   # de-duplicate, keep order
+    # Build the skills list
+    if OPP_TYPE == "internship":
+        role = title_to_skill(r["title"])
+        skills = [role] + expand_skills(role) + [t.lower() for t in tags]
+    else:
+        skills = [t.lower() for t in tags]
+
+    extra = []
+    for s in skills:
+        extra.extend(TAG_EXPAND.get(s, []))
+    skills = list(dict.fromkeys(s for s in skills + extra if s))  # de-duplicate, keep order
 
     title = r["title"].strip()
     company = r["company"].strip()
-    full_title = f"{title} - {company}" if company else title
+    # Internships keep the company in the title (many share the same role name);
+    # hackathons use just the event name to keep cards short.
+    full_title = f"{title} - {company}" if (company and OPP_TYPE == "internship") else title
 
     items.append({
         "title": full_title,
@@ -106,11 +134,14 @@ else:
     db = SessionLocal()
     saved = 0
     for it in items:
+        if it["skills"] == "general":
+            continue    # skip events we can't match to any skill
+
         if db.query(Opportunity).filter(Opportunity.title == it["title"]).first():
             continue
-        db.add(Opportunity(title=it["title"], type="internship",
+        db.add(Opportunity(title=it["title"], type=OPP_TYPE,
                            skills=it["skills"], deadline=it["deadline"]))
         saved += 1
     db.commit()
     db.close()
-    print(f"\nSaved {saved} new internships.")
+    print(f"\nSaved {saved} new {OPP_TYPE}s.")

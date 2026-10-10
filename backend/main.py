@@ -31,7 +31,7 @@ def read_root():
 
 @app.post("/opportunities")
 def create_opportunity(title: str, type: str, skills: str, deadline: str, db: Session = Depends(get_db)):
-    new_opp = Opportunity(title=title, type=type, skills=skills, deadline=deadline)
+    new_opp = Opportunity(title=title, type=type.strip().lower(), skills=skills, deadline=deadline)
     db.add(new_opp)
     db.commit()
     db.refresh(new_opp)

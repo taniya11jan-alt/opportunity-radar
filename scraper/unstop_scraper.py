@@ -9,6 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from skill_map import expand_skills
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from database import SessionLocal
@@ -82,7 +83,8 @@ for r in raw:
     tags = [s for s in tags if s.lower() not in NOT_SKILLS
             and not is_salary(s) and not re.fullmatch(r"\+\d+", s)]
 
-    skills = [title_to_skill(r["title"])] + [t.lower() for t in tags]
+    role = title_to_skill(r["title"])
+    skills = [role] + expand_skills(role) + [t.lower() for t in tags]
     skills = list(dict.fromkeys(s for s in skills if s))   # de-duplicate, keep order
 
     title = r["title"].strip()

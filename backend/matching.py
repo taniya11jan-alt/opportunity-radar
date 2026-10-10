@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, date
 
+IGNORED_TAGS = {
+    "open ended", "beginner friendly", "beginnerfriendly", "productivity",
+    "lifehacks", "social good", "education", "general"
+}
 def calculate_skill_score(student_skills: str, opportunity_skills: str) -> float:
     student_set = set(skill.strip().lower() for skill in student_skills.split(","))
     opportunity_set = set(skill.strip().lower() for skill in opportunity_skills.split(","))
-
+    opportunity_set = opportunity_set - IGNORED_TAGS
     if not opportunity_set:
         return 0.0
 
@@ -20,11 +24,11 @@ def calculate_skill_score(student_skills: str, opportunity_skills: str) -> float
 
 def calculate_urgency_score(deadline_str: str) -> float:
     try:
-        deadline = datetime.strptime(deadline_str, "%Y-%m-%d")
+        deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
     except ValueError:
         return 0.0
 
-    days_left = (deadline - datetime.now()).days
+    days_left = (deadline - date.today()).days
 
     if days_left < 0:
         return 0.0

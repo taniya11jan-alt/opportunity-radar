@@ -2,6 +2,7 @@ import sys
 import os
 import time
 from datetime import datetime
+import re
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -34,6 +35,12 @@ def parse_deadline(date_range_text):
         print(f"Could not parse date: '{date_range_text}'")
         return None
 
+def clean_title(title):
+    """Removes bracketed prize text like '($400,000 in prizes!)' only."""
+    title = re.sub(r"\([^)]*prize[^)]*\)", "", title, flags=re.IGNORECASE)
+    title = re.sub(r"\s*[-–—]\s*$", "", title)   # dangling dash at the end
+    title = re.sub(r"\s+", " ", title)           # collapse double spaces
+    return title.strip()
 
 start = time.time()
 
@@ -85,16 +92,16 @@ saved_count = 0
 
 for t in raw_tiles:
     deadline = parse_deadline(t["date"])
-    if not t["title"] or deadline is None:
+    title = clean_title(t["title"])
+    if not title or deadline is None:
         continue
 
-    # Skip hackathons that are already stored
-    if db.query(Opportunity).filter(Opportunity.title == t["title"]).first():
+    if db.query(Opportunity).filter(Opportunity.title == title).first():
         continue
 
     skills = ",".join(t["tags"]) if t["tags"] else "general"
     db.add(Opportunity(
-        title=t["title"],
+        title=title,
         type="hackathon",
         skills=skills,
         deadline=deadline

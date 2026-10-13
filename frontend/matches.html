@@ -1,50 +1,112 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Opportunity Radar - Matches</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>Opportunity Radar</h1>
-    <p class="subtitle">
-      Find hackathons, internships, and competitions matched to you.
-    </p>
+    <main class="container py-4" style="max-width: 900px">
+      <div class="topbar">
+        <a class="logo" href="index.html">Opportunity<span>Radar</span></a>
+        <ul class="nav nav-pills">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="signup.html">Sign Up</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="matches.html">Find Matches</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="admin.html">Admin</a>
+          </li>
+        </ul>
+      </div>
 
-    <nav>
-      <a href="signup.html">Sign Up</a>
-      <a href="matches.html" class="active">Find Matches</a>
-      <a href="admin.html">Admin</a>
-    </nav>
+      <section class="hero small">
+        <h1 id="heroTitle">Your matches</h1>
+        <p id="heroSub">
+          Enter your student ID to see opportunities ranked for you.
+        </p>
+      </section>
 
-    <div class="panel">
-      <h2>Find your matches</h2>
-      <input type="number" id="studentId" placeholder="Your student ID" />
-      <button onclick="loadMatches()">Find Matches</button>
-    </div>
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="row g-3 align-items-center">
+            <div class="col-md-5">
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="studentId"
+                  class="form-control"
+                  placeholder="Your student ID"
+                />
+                <button class="btn btn-primary" onclick="loadMatches()">
+                  Find
+                </button>
+              </div>
+            </div>
+            <div
+              class="col-md-7 d-flex flex-wrap gap-3 align-items-center justify-content-md-end"
+            >
+              <select
+                id="typeFilter"
+                class="form-select form-select-sm w-auto"
+                onchange="render()"
+              >
+                <option value="all">All types</option>
+                <option value="hackathon">Hackathons</option>
+                <option value="internship">Internships</option>
+                <option value="competition">Competitions</option>
+                <option value="contest">Contests</option>
+              </select>
+              <div class="form-check mb-0">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="hideZero"
+                  checked
+                  onchange="render()"
+                />
+                <label class="form-check-label small" for="hideZero"
+                  >Hide 0% skill fit</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <div class="panel filters">
-      <label
-        >Type
-        <select id="typeFilter" onchange="render()">
-          <option value="all">All</option>
-          <option value="hackathon">Hackathons</option>
-          <option value="internship">Internships</option>
-          <option value="competition">Competitions</option>
-          <option value="contest">Contests</option>
-        </select>
-      </label>
-      <label>
-        <input type="checkbox" id="hideZero" checked onchange="render()" />
-        Hide 0% skill fit
-      </label>
-    </div>
+      <div id="summary"></div>
+      <div id="results">
+        <div class="empty-state">
+          <div class="big">&#128269;</div>
+          <p class="mb-1 fw-semibold">No matches loaded yet</p>
+          <p class="small mb-0">
+            Enter your ID above, or
+            <a href="signup.html">create a profile</a> if you're new.
+          </p>
+        </div>
+      </div>
+    </main>
 
-    <div id="results"></div>
+    <footer>Opportunity Radar &middot; Minor project</footer>
 
     <script>
       const API = "http://127.0.0.1:8000";
+      const TYPE_COLORS = {
+        hackathon: "primary",
+        internship: "info",
+        competition: "warning",
+        contest: "success",
+      };
       let studentName = "";
       let allMatches = [];
 
@@ -61,107 +123,123 @@
             })[c],
         );
       }
-
       function daysLeft(dateStr) {
         const d = new Date(dateStr + "T00:00:00");
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return Math.round((d - today) / 86400000);
+        const t = new Date();
+        t.setHours(0, 0, 0, 0);
+        return Math.round((d - t) / 86400000);
       }
-
       function dueLabel(n) {
-        if (isNaN(n)) return { text: "Date unknown", cls: "" };
-        if (n === 0) return { text: "Closes today", cls: "urgent" };
-        if (n === 1) return { text: "1 day left", cls: "urgent" };
-        if (n <= 3) return { text: n + " days left", cls: "urgent" };
-        if (n <= 7) return { text: n + " days left", cls: "soon" };
-        return { text: n + " days left", cls: "" };
+        if (isNaN(n)) return { text: "Date unknown", cls: "text-secondary" };
+        if (n === 0) return { text: "Closes today", cls: "text-danger" };
+        if (n <= 3)
+          return {
+            text: n + (n === 1 ? " day left" : " days left"),
+            cls: "text-danger",
+          };
+        if (n <= 7) return { text: n + " days left", cls: "text-warning" };
+        return { text: n + " days left", cls: "text-secondary" };
       }
 
       async function loadMatches() {
         const id = document.getElementById("studentId").value;
         const out = document.getElementById("results");
-        if (!id) {
-          out.innerHTML =
-            '<div class="empty">Enter your student ID first.</div>';
-          return;
-        }
-        out.innerHTML = '<div class="empty">Loading...</div>';
-
+        if (!id) return;
+        out.innerHTML = '<div class="empty-state">Loading...</div>';
         try {
           const res = await fetch(`${API}/students/${id}/matches`);
           const data = await res.json();
           if (data.error) {
-            out.innerHTML = `<div class="empty">${esc(data.error)}</div>`;
+            document.getElementById("summary").innerHTML = "";
+            out.innerHTML = `<div class="alert alert-warning">${esc(data.error)}. Check your ID or <a href="signup.html" class="alert-link">sign up</a>.</div>`;
             return;
           }
           localStorage.setItem("studentId", id);
           studentName = data.student;
           allMatches = data.matches;
+          document.getElementById("heroTitle").textContent =
+            "Hi " + studentName + ", here are your matches";
+          document.getElementById("heroSub").textContent =
+            "Ranked by skill fit and how soon each one closes.";
           render();
         } catch (e) {
           out.innerHTML =
-            '<div class="empty">Could not reach the server. Is the backend running?</div>';
+            '<div class="alert alert-danger">Could not reach the server. Is the backend running?</div>';
         }
       }
 
       function render() {
-        const out = document.getElementById("results");
         if (!allMatches.length) return;
-
         const type = document.getElementById("typeFilter").value;
         const hideZero = document.getElementById("hideZero").checked;
 
-        const visible = allMatches.filter(
+        const open = allMatches.filter((m) => daysLeft(m.deadline) >= 0);
+        const visible = open.filter(
           (m) =>
-            daysLeft(m.deadline) >= 0 &&
             (type === "all" || m.type === type) &&
             (!hideZero || m.skill_score > 0),
         );
 
-        let html = `<p class="summary">Showing <strong>${visible.length}</strong> opportunities for <strong>${esc(studentName)}</strong></p>`;
+        const strong = open.filter((m) => m.skill_score >= 0.5).length;
+        const soon = open.filter(
+          (m) => m.skill_score > 0 && daysLeft(m.deadline) <= 7,
+        ).length;
+
+        document.getElementById("summary").innerHTML = `
+        <div class="card mb-3"><div class="row g-0">
+          <div class="col-4 stat"><div class="num">${visible.length}</div><div class="lbl">Showing</div></div>
+          <div class="col-4 stat"><div class="num">${strong}</div><div class="lbl">Strong skill matches</div></div>
+          <div class="col-4 stat"><div class="num">${soon}</div><div class="lbl">Relevant and closing this week</div></div>
+        </div></div>`;
+
+        const out = document.getElementById("results");
         if (!visible.length) {
-          html +=
-            '<div class="empty">No matches for these filters. Try unticking "Hide 0% skill fit".</div>';
+          out.innerHTML =
+            '<div class="empty-state"><div class="big">&#129320;</div><p>No matches for these filters.</p><p class="small">Try untick "Hide 0% skill fit" or add more skills to your profile.</p></div>';
+          return;
         }
 
-        visible.forEach((m) => {
-          const pct = Math.round(m.match_score * 100);
-          const level =
-            m.match_score >= 0.6
-              ? "high"
-              : m.match_score >= 0.3
-                ? "medium"
-                : "low";
-          const due = dueLabel(daysLeft(m.deadline));
-          const chips = (m.skills || "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .slice(0, 6)
-            .map((s) => `<span class="chip">${esc(s)}</span>`)
-            .join("");
-
-          html += `
-          <div class="match-card">
-            <div class="card-top">
+        out.innerHTML = visible
+          .map((m) => {
+            const pct = Math.round(m.match_score * 100);
+            const level =
+              m.match_score >= 0.6
+                ? "success"
+                : m.match_score >= 0.3
+                  ? "warning"
+                  : "secondary";
+            const due = dueLabel(daysLeft(m.deadline));
+            const color = TYPE_COLORS[m.type] || "secondary";
+            const chips = (m.skills || "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .slice(0, 6)
+              .map(
+                (s) => `<span class="badge rounded-pill chip">${esc(s)}</span>`,
+              )
+              .join(" ");
+            return `
+          <div class="card match-card mb-3"><div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3">
               <div>
-                <h3>${esc(m.title)}</h3>
-                <div class="meta">
-                  <span class="badge ${esc(m.type)}">${esc(m.type)}</span>
-                  <span class="due ${due.cls}">${due.text}</span>
-                  <span>${esc(m.deadline)}</span>
+                <h3 class="h6 mb-2">${esc(m.title)}</h3>
+                <div class="d-flex flex-wrap gap-2 align-items-center small">
+                  <span class="badge text-bg-${color} text-capitalize">${esc(m.type)}</span>
+                  <span class="fw-semibold ${due.cls}">${due.text}</span>
+                  <span class="text-secondary">${esc(m.deadline)}</span>
                 </div>
               </div>
-              <div class="score-num ${level}">${pct}%</div>
+              <div class="score-num text-${level}">${pct}%</div>
             </div>
-            <div class="bar"><span style="width:${pct}%"></span></div>
-            <p class="breakdown">Skill fit ${Math.round(m.skill_score * 100)}% &nbsp;|&nbsp; Urgency ${Math.round(m.urgency_score * 100)}%</p>
-            <div class="chips">${chips}</div>
-          </div>`;
-        });
-
-        out.innerHTML = html;
+            <div class="progress my-3" style="height: 6px;">
+              <div class="progress-bar bg-${level}" style="width: ${pct}%"></div>
+            </div>
+            <p class="small text-secondary mb-2">Skill fit ${Math.round(m.skill_score * 100)}% &nbsp;|&nbsp; Urgency ${Math.round(m.urgency_score * 100)}%</p>
+            <div class="d-flex flex-wrap gap-1">${chips}</div>
+          </div></div>`;
+          })
+          .join("");
       }
 
       const saved = localStorage.getItem("studentId");

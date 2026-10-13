@@ -12,7 +12,7 @@
     </p>
 
     <nav>
-      <a href="signup.html">Sign Up</a>
+      <a href="signup.html" class="active">Sign Up</a>
       <a href="matches.html">Find Matches</a>
       <a href="admin.html">Admin</a>
     </nav>
@@ -60,7 +60,7 @@
             resultEl.innerHTML = data.detail || "Signup failed.";
             return;
           }
-
+          localStorage.setItem("studentId", data.id);
           resultEl.innerHTML = `Signed up! Your student ID is <strong>${data.id}</strong>. Go to <a href="matches.html">Find Matches</a> and enter this ID.`;
         } catch (err) {
           resultEl.innerHTML = "Signup failed. Is the backend running?";

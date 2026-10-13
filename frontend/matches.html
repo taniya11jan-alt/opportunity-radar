@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Opportunity Radar - Matches</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -13,7 +14,7 @@
 
     <nav>
       <a href="signup.html">Sign Up</a>
-      <a href="matches.html">Find Matches</a>
+      <a href="matches.html" class="active">Find Matches</a>
       <a href="admin.html">Admin</a>
     </nav>
 
@@ -23,10 +24,10 @@
       <button onclick="loadMatches()">Find Matches</button>
     </div>
 
-    <div class="panel">
+    <div class="panel filters">
       <label
-        >Show type:
-        <select id="typeFilter" onchange="loadMatches()">
+        >Type
+        <select id="typeFilter" onchange="render()">
           <option value="all">All</option>
           <option value="hackathon">Hackathons</option>
           <option value="internship">Internships</option>
@@ -34,68 +35,139 @@
           <option value="contest">Contests</option>
         </select>
       </label>
-      <label style="margin-left: 16px">
-        <input
-          type="checkbox"
-          id="hideZero"
-          checked
-          onchange="loadMatches()"
-          style="width: auto"
-        />
-        Hide opportunities with 0% skill fit
+      <label>
+        <input type="checkbox" id="hideZero" checked onchange="render()" />
+        Hide 0% skill fit
       </label>
     </div>
+
     <div id="results"></div>
 
     <script>
+      const API = "http://127.0.0.1:8000";
+      let studentName = "";
+      let allMatches = [];
+
+      function esc(s) {
+        return String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+
+      function daysLeft(dateStr) {
+        const d = new Date(dateStr + "T00:00:00");
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return Math.round((d - today) / 86400000);
+      }
+
+      function dueLabel(n) {
+        if (isNaN(n)) return { text: "Date unknown", cls: "" };
+        if (n === 0) return { text: "Closes today", cls: "urgent" };
+        if (n === 1) return { text: "1 day left", cls: "urgent" };
+        if (n <= 3) return { text: n + " days left", cls: "urgent" };
+        if (n <= 7) return { text: n + " days left", cls: "soon" };
+        return { text: n + " days left", cls: "" };
+      }
+
       async function loadMatches() {
-        const studentId = document.getElementById("studentId").value;
-        const resultsDiv = document.getElementById("results");
-        resultsDiv.innerHTML = "Loading...";
+        const id = document.getElementById("studentId").value;
+        const out = document.getElementById("results");
+        if (!id) {
+          out.innerHTML =
+            '<div class="empty">Enter your student ID first.</div>';
+          return;
+        }
+        out.innerHTML = '<div class="empty">Loading...</div>';
 
         try {
-          const response = await fetch(
-            `http://127.0.0.1:8000/students/${studentId}/matches`,
-          );
-          const data = await response.json();
-
+          const res = await fetch(`${API}/students/${id}/matches`);
+          const data = await res.json();
           if (data.error) {
-            resultsDiv.innerHTML = `<p>${data.error}</p>`;
+            out.innerHTML = `<div class="empty">${esc(data.error)}</div>`;
             return;
           }
-
-          resultsDiv.innerHTML = `<h2>Matches for ${data.student}</h2>`;
-          const typeFilter = document.getElementById("typeFilter").value;
-          const hideZero = document.getElementById("hideZero").checked;
-
-          const visible = data.matches.filter(
-            (m) =>
-              (typeFilter === "all" || m.type === typeFilter) &&
-              (!hideZero || m.skill_score > 0),
-          );
-
-          if (visible.length === 0) {
-            resultsDiv.innerHTML += "<p>No matches for these filters.</p>";
-          }
-
-          visible.forEach((match) => {
-            let level = "low";
-            if (match.match_score >= 0.6) level = "high";
-            else if (match.match_score >= 0.3) level = "medium";
-
-            resultsDiv.innerHTML += `
-            <div class="match-card ${level}">
-              <h3>${match.title}</h3>
-              <p class="meta"><span class="badge">${match.type}</span> &nbsp; Deadline: ${match.deadline}</p>
-              <p class="score ${level}">Match Score: ${Math.round(match.match_score * 100)}%</p>
-              <p class="breakdown">Skill fit: ${Math.round(match.skill_score * 100)}% &nbsp; | &nbsp; Urgency: ${Math.round(match.urgency_score * 100)}%</p>
-            </div>
-          `;
-          });
-        } catch (err) {
-          resultsDiv.innerHTML =
-            "Error loading matches. Is the backend server running?";
+          localStorage.setItem("studentId", id);
+          studentName = data.student;
+          allMatches = data.matches;
+          render();
+        } catch (e) {
+          out.innerHTML =
+            '<div class="empty">Could not reach the server. Is the backend running?</div>';
         }
+      }
+
+      function render() {
+        const out = document.getElementById("results");
+        if (!allMatches.length) return;
+
+        const type = document.getElementById("typeFilter").value;
+        const hideZero = document.getElementById("hideZero").checked;
+
+        const visible = allMatches.filter(
+          (m) =>
+            daysLeft(m.deadline) >= 0 &&
+            (type === "all" || m.type === type) &&
+            (!hideZero || m.skill_score > 0),
+        );
+
+        let html = `<p class="summary">Showing <strong>${visible.length}</strong> opportunities for <strong>${esc(studentName)}</strong></p>`;
+        if (!visible.length) {
+          html +=
+            '<div class="empty">No matches for these filters. Try unticking "Hide 0% skill fit".</div>';
+        }
+
+        visible.forEach((m) => {
+          const pct = Math.round(m.match_score * 100);
+          const level =
+            m.match_score >= 0.6
+              ? "high"
+              : m.match_score >= 0.3
+                ? "medium"
+                : "low";
+          const due = dueLabel(daysLeft(m.deadline));
+          const chips = (m.skills || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, 6)
+            .map((s) => `<span class="chip">${esc(s)}</span>`)
+            .join("");
+
+          html += `
+          <div class="match-card">
+            <div class="card-top">
+              <div>
+                <h3>${esc(m.title)}</h3>
+                <div class="meta">
+                  <span class="badge ${esc(m.type)}">${esc(m.type)}</span>
+                  <span class="due ${due.cls}">${due.text}</span>
+                  <span>${esc(m.deadline)}</span>
+                </div>
+              </div>
+              <div class="score-num ${level}">${pct}%</div>
+            </div>
+            <div class="bar"><span style="width:${pct}%"></span></div>
+            <p class="breakdown">Skill fit ${Math.round(m.skill_score * 100)}% &nbsp;|&nbsp; Urgency ${Math.round(m.urgency_score * 100)}%</p>
+            <div class="chips">${chips}</div>
+          </div>`;
+        });
+
+        out.innerHTML = html;
+      }
+
+      const saved = localStorage.getItem("studentId");
+      if (saved) {
+        document.getElementById("studentId").value = saved;
+        loadMatches();
       }
     </script>
   </body>

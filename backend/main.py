@@ -1,5 +1,5 @@
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 from models import Opportunity, Student
@@ -31,7 +31,16 @@ def read_root():
 
 @app.post("/opportunities")
 def create_opportunity(title: str, type: str, skills: str, deadline: str, db: Session = Depends(get_db)):
-    new_opp = Opportunity(title=title, type=type.strip().lower(), skills=skills, deadline=deadline)
+    skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+    if len(skill_list) < 2:
+        raise HTTPException(status_code=400, detail="Please enter at least 2 skills, separated by commas.")
+
+    new_opp = Opportunity(
+        title=title.strip(),
+        type=type.strip().lower(),
+        skills=",".join(skill_list),
+        deadline=deadline
+    )
     db.add(new_opp)
     db.commit()
     db.refresh(new_opp)
@@ -43,7 +52,23 @@ def get_opportunities(db: Session = Depends(get_db)):
 
 @app.post("/students")
 def create_student(name: str, email: str, year: str, skills: str, db: Session = Depends(get_db)):
-    new_student = Student(name=name, email=email, year=year, skills=skills)
+    email_clean = email.strip().lower()
+    skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+
+    if not name.strip() or "@" not in email_clean:
+        raise HTTPException(status_code=400, detail="Please enter a name and a valid email.")
+    if len(skill_list) < 2:
+        raise HTTPException(status_code=400, detail="Please enter at least 2 skills, separated by commas.")
+
+    existing = db.query(Student).filter(Student.email == email_clean).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This email is already registered. Your student ID is {existing.id}."
+        )
+
+    new_student = Student(name=name.strip(), email=email_clean,
+                          year=year.strip(), skills=",".join(skill_list))
     db.add(new_student)
     db.commit()
     db.refresh(new_student)

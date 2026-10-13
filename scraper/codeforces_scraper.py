@@ -37,8 +37,8 @@ else:
     for it in items:
         if db.query(Opportunity).filter(Opportunity.title == it["title"]).first():
             continue
-        db.add(Opportunity(title=it["title"], type="competition",
-                           skills=it["skills"], deadline=it["deadline"]))
+        db.add(Opportunity(title=it["title"], type="contest",
+                   skills=it["skills"], deadline=it["deadline"]))
         saved += 1
     db.commit()
     db.close()

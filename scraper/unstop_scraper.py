@@ -16,20 +16,18 @@ from models import Opportunity
 from skill_map import expand_skills
 
 # ---------- Settings ----------
-OPP_TYPE = "hackathon"      # "internship" or "hackathon"
+OPP_TYPE = "internship"      
 HEADLESS = False
-DRY_RUN = False              
+DRY_RUN = False
 
 URL = f"https://unstop.com/{'internship' if OPP_TYPE == 'internship' else 'hackathons'}?oppstatus=open"
 
-# Labels that are not skills
 NOT_SKILLS = {"fresher", "management", "postgraduate", "undergraduate",
               "graduate", "experienced", "everyone can apply",
               "engineering students", "pre-placement offers",
               "quizzes & treasure hunt", "learning & development",
               "law", "medical"}
 
-# Hand-written heuristic: turns broad tags into skills students actually list
 TAG_EXPAND = {
     "software development": ["programming", "python", "java"],
     "devops": ["docker", "git", "linux"],
@@ -49,12 +47,11 @@ def parse_days_left(text):
 
 
 def is_salary(text):
-    """Matches things like '12 K -', '15 K/Month', '30K/Month'."""
-    return bool(re.search(r"\d\s*K\b|/\s*month", text, flags=re.IGNORECASE))
+    """Salary or prize text, not a skill."""
+    return bool(re.search(r"\d\s*K\b|/\s*month|prize|worth|\d[\d,]{3,}", text, flags=re.IGNORECASE))
 
 
 def title_to_skill(title):
-    """'Python Internship' -> 'python'."""
     t = re.sub(r"\binternship\b", "", title, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", t).strip().lower()
 
@@ -74,7 +71,6 @@ try:
 except Exception:
     print("Cards never appeared. Page title:", driver.title)
 
-# One listing page per run: scroll to render more cards, no paging
 for _ in range(3):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
@@ -84,7 +80,8 @@ raw = driver.execute_script("""
         title: (a.querySelector('h3') || {}).innerText || '',
         company: (a.querySelector('p.single-wrap') || {}).innerText || '',
         skills: (a.querySelector('.skill_list') || {}).innerText || '',
-        dates: (a.querySelector('.dates-fields') || {}).innerText || ''
+        dates: (a.querySelector('.dates-fields') || {}).innerText || '',
+        link: a.href || ''
     }));
 """)
 driver.quit()
@@ -96,12 +93,10 @@ for r in raw:
     if days is None or not r["title"].strip():
         continue
 
-    # Clean the tags
     tags = [s.strip() for s in r["skills"].split("\n") if s.strip()]
     tags = [s for s in tags if s.lower() not in NOT_SKILLS
             and not is_salary(s) and not re.fullmatch(r"\+\d+", s)]
 
-    # Build the skills list
     if OPP_TYPE == "internship":
         role = title_to_skill(r["title"])
         skills = [role] + expand_skills(role) + [t.lower() for t in tags]
@@ -111,18 +106,17 @@ for r in raw:
     extra = []
     for s in skills:
         extra.extend(TAG_EXPAND.get(s, []))
-    skills = list(dict.fromkeys(s for s in skills + extra if s))  # de-duplicate, keep order
+    skills = list(dict.fromkeys(s for s in skills + extra if s))
 
     title = r["title"].strip()
     company = r["company"].strip()
-    # Internships keep the company in the title (many share the same role name);
-    # hackathons use just the event name to keep cards short.
     full_title = f"{title} - {company}" if (company and OPP_TYPE == "internship") else title
 
     items.append({
         "title": full_title,
         "skills": ",".join(skills) if skills else "general",
         "deadline": (date.today() + timedelta(days=days)).isoformat(),
+        "link": r["link"],
     })
 
 for it in items:
@@ -135,12 +129,16 @@ else:
     saved = 0
     for it in items:
         if it["skills"] == "general":
-            continue    # skip events we can't match to any skill
-
-        if db.query(Opportunity).filter(Opportunity.title == it["title"]).first():
             continue
-        db.add(Opportunity(title=it["title"], type=OPP_TYPE,
-                           skills=it["skills"], deadline=it["deadline"]))
+
+        existing = db.query(Opportunity).filter(Opportunity.title == it["title"]).first()
+        if existing:
+            if it["link"] and not existing.link:
+                existing.link = it["link"]
+            continue
+
+        db.add(Opportunity(title=it["title"], type=OPP_TYPE, skills=it["skills"],
+                           deadline=it["deadline"], link=it["link"]))
         saved += 1
     db.commit()
     db.close()

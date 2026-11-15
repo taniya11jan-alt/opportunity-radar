@@ -8,6 +8,7 @@ class Opportunity(Base):
     type = Column(String)
     skills = Column(String)
     deadline = Column(String)
+    link = Column(String, nullable=True)
 
 class Student(Base):
     __tablename__ = "students"

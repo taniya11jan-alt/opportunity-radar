@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from database import SessionLocal
 from models import Opportunity
 
-DRY_RUN = False
+DRY_RUN = False   # True = only print, don't save
 
 resp = requests.get("https://codeforces.com/api/contest.list", timeout=20)
 data = resp.json()
@@ -24,6 +24,7 @@ for c in data["result"]:
         "title": f"Codeforces: {c['name']}",
         "skills": "algorithms,data structures,competitive programming,c++,python",
         "deadline": start.strftime("%Y-%m-%d"),
+        "link": f"https://codeforces.com/contests/{c['id']}",
     })
 
 for it in items:
@@ -35,10 +36,13 @@ else:
     db = SessionLocal()
     saved = 0
     for it in items:
-        if db.query(Opportunity).filter(Opportunity.title == it["title"]).first():
+        existing = db.query(Opportunity).filter(Opportunity.title == it["title"]).first()
+        if existing:
+            if not existing.link:
+                existing.link = it["link"]
             continue
-        db.add(Opportunity(title=it["title"], type="contest",
-                   skills=it["skills"], deadline=it["deadline"]))
+        db.add(Opportunity(title=it["title"], type="contest", skills=it["skills"],
+                           deadline=it["deadline"], link=it["link"]))
         saved += 1
     db.commit()
     db.close()

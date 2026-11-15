@@ -123,6 +123,9 @@
             })[c],
         );
       }
+      function safeLink(u) {
+        return /^https?:\/\//i.test(u || "") ? u : null;
+      }
       function daysLeft(dateStr) {
         const d = new Date(dateStr + "T00:00:00");
         const t = new Date();
@@ -219,6 +222,10 @@
                 (s) => `<span class="badge rounded-pill chip">${esc(s)}</span>`,
               )
               .join(" ");
+            const url = safeLink(m.link);
+            const btn = url
+              ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary ms-auto">View &amp; apply &#8599;</a>`
+              : "";
             return `
           <div class="card match-card mb-3"><div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-3">
@@ -236,7 +243,7 @@
               <div class="progress-bar bg-${level}" style="width: ${pct}%"></div>
             </div>
             <p class="small text-secondary mb-2">Skill fit ${Math.round(m.skill_score * 100)}% &nbsp;|&nbsp; Urgency ${Math.round(m.urgency_score * 100)}%</p>
-            <div class="d-flex flex-wrap gap-1">${chips}</div>
+                        <div class="d-flex flex-wrap gap-1 align-items-center">${chips}${btn}</div>
           </div></div>`;
           })
           .join("");

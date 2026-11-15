@@ -94,6 +94,7 @@ def get_matches(student_id: int, db: Session = Depends(get_db)):
             "title": opp.title,
             "type": opp.type,
             "deadline": opp.deadline,
+            "link": opp.link,
             "skills": opp.skills,
             "skill_score": scores["skill_score"],
             "urgency_score": scores["urgency_score"],

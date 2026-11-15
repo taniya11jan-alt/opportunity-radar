@@ -14,7 +14,17 @@ SKILL_MAP = {
     "autocad": ["autocad", "design"],
     "video editor": ["video editing"],
     "social media": ["social media", "content writing"],
-    "business development": ["sales", "communication"],
+    "business development": ["sales", "communication"],     "data scientist": ["python", "machine learning", "statistics"],
+    "digital marketing": ["seo", "social media", "marketing"],
+    "marketing": ["marketing", "communication"],
+    "ui/ux": ["figma", "ui design", "ux"],
+    "design": ["design", "figma"],
+    "cad": ["autocad", "cad"],
+    "electronics": ["electronics", "embedded systems"],
+    "artificial intelligence": ["python", "machine learning", "ai"],
+    "generative ai": ["python", "machine learning", "llm"],
+    "hr": ["communication", "recruitment"],
+    "research": ["research", "excel"],
 }
 
 

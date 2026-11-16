@@ -87,6 +87,37 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Wrong email or password.")
     return {"token": make_token(s.id), "name": s.name, "is_admin": bool(s.is_admin)}
 
+class ProfileIn(BaseModel):
+    name: str
+    year: str
+    skills: str
+    password: Optional[str] = None  
+
+
+@app.get("/me")
+def get_me(student: Student = Depends(current_student)):
+    return {"name": student.name, "email": student.email,
+            "year": student.year, "skills": student.skills}
+
+
+@app.put("/me")
+def update_me(data: ProfileIn, student: Student = Depends(current_student),
+              db: Session = Depends(get_db)):
+    skill_list = [s.strip() for s in data.skills.split(",") if s.strip()]
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Please enter your name.")
+    if len(skill_list) < 2:
+        raise HTTPException(status_code=400, detail="Please enter at least 2 skills, separated by commas.")
+    if data.password:
+        if len(data.password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+        student.password_hash = hash_password(data.password)
+
+    student.name = data.name.strip()
+    student.year = data.year.strip()
+    student.skills = ",".join(skill_list)
+    db.commit()
+    return {"name": student.name, "skills": student.skills}
 
 @app.get("/opportunities")
 def get_opportunities(db: Session = Depends(get_db)):

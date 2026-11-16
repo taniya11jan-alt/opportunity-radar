@@ -1,5 +1,3 @@
-// Shared by every page. Load it BEFORE the page's own script:
-//   <script src="auth.js"></script>
 const API = "http://127.0.0.1:8000";
 
 function getSession() {
@@ -69,6 +67,7 @@ function renderNav(active) {
   const s = getSession();
   const items = [["index.html", "Home", "home"]];
   if (s) items.push(["matches.html", "My Matches", "matches"]);
+  if (s) items.push(["profile.html", "Profile", "profile"]);
   if (s && s.isAdmin) items.push(["admin.html", "Admin", "admin"]);
   if (!s) {
     items.push(["login.html", "Log in", "login"]);

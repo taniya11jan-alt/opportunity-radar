@@ -14,115 +14,62 @@
     <main class="container py-4" style="max-width: 900px">
       <div class="topbar">
         <a class="logo" href="index.html">Opportunity<span>Radar</span></a>
-        <ul class="nav nav-pills">
-          <li class="nav-item">
-            <a class="nav-link" href="index.html">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="signup.html">Sign Up</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" href="matches.html">Find Matches</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="admin.html">Admin</a>
-          </li>
-        </ul>
+        <ul class="nav nav-pills" id="nav"></ul>
       </div>
 
       <section class="hero small">
         <h1 id="heroTitle">Your matches</h1>
-        <p id="heroSub">
-          Enter your student ID to see opportunities ranked for you.
-        </p>
+        <p id="heroSub">Loading your opportunities...</p>
       </section>
 
       <div class="card mb-3">
         <div class="card-body">
-          <div class="row g-3 align-items-center">
-            <div class="col-md-5">
-              <div class="input-group">
-                <input
-                  type="number"
-                  id="studentId"
-                  class="form-control"
-                  placeholder="Your student ID"
-                />
-                <button class="btn btn-primary" onclick="loadMatches()">
-                  Find
-                </button>
-              </div>
-            </div>
-            <div
-              class="col-md-7 d-flex flex-wrap gap-3 align-items-center justify-content-md-end"
+          <div
+            class="d-flex flex-wrap gap-3 align-items-center justify-content-md-end"
+          >
+            <select
+              id="typeFilter"
+              class="form-select form-select-sm w-auto"
+              onchange="render()"
             >
-              <select
-                id="typeFilter"
-                class="form-select form-select-sm w-auto"
+              <option value="all">All types</option>
+              <option value="hackathon">Hackathons</option>
+              <option value="internship">Internships</option>
+              <option value="competition">Competitions</option>
+              <option value="contest">Contests</option>
+            </select>
+            <div class="form-check mb-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="hideZero"
+                checked
                 onchange="render()"
+              />
+              <label class="form-check-label small" for="hideZero"
+                >Hide 0% skill fit</label
               >
-                <option value="all">All types</option>
-                <option value="hackathon">Hackathons</option>
-                <option value="internship">Internships</option>
-                <option value="competition">Competitions</option>
-                <option value="contest">Contests</option>
-              </select>
-              <div class="form-check mb-0">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="hideZero"
-                  checked
-                  onchange="render()"
-                />
-                <label class="form-check-label small" for="hideZero"
-                  >Hide 0% skill fit</label
-                >
-              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div id="summary"></div>
-      <div id="results">
-        <div class="empty-state">
-          <div class="big">&#128269;</div>
-          <p class="mb-1 fw-semibold">No matches loaded yet</p>
-          <p class="small mb-0">
-            Enter your ID above, or
-            <a href="signup.html">create a profile</a> if you're new.
-          </p>
-        </div>
-      </div>
+      <div id="results"></div>
     </main>
 
     <footer>Opportunity Radar &middot; Minor project</footer>
 
+    <script src="auth.js"></script>
     <script>
-      const API = "http://127.0.0.1:8000";
       const TYPE_COLORS = {
         hackathon: "primary",
         internship: "info",
         competition: "warning",
         contest: "success",
       };
-      let studentName = "";
       let allMatches = [];
 
-      function esc(s) {
-        return String(s ?? "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
-      }
       function safeLink(u) {
         return /^https?:\/\//i.test(u || "") ? u : null;
       }
@@ -145,34 +92,31 @@
       }
 
       async function loadMatches() {
-        const id = document.getElementById("studentId").value;
         const out = document.getElementById("results");
-        if (!id) return;
         out.innerHTML = '<div class="empty-state">Loading...</div>';
         try {
-          const res = await fetch(`${API}/students/${id}/matches`);
+          const res = await authFetch("/me/matches");
           const data = await res.json();
-          if (data.error) {
-            document.getElementById("summary").innerHTML = "";
-            out.innerHTML = `<div class="alert alert-warning">${esc(data.error)}. Check your ID or <a href="signup.html" class="alert-link">sign up</a>.</div>`;
-            return;
-          }
-          localStorage.setItem("studentId", id);
-          studentName = data.student;
           allMatches = data.matches;
           document.getElementById("heroTitle").textContent =
-            "Hi " + studentName + ", here are your matches";
+            "Hi " + data.student + ", here are your matches";
           document.getElementById("heroSub").textContent =
             "Ranked by skill fit and how soon each one closes.";
           render();
         } catch (e) {
+          if (e.message === "Not logged in") return;
           out.innerHTML =
             '<div class="alert alert-danger">Could not reach the server. Is the backend running?</div>';
         }
       }
 
       function render() {
-        if (!allMatches.length) return;
+        const out = document.getElementById("results");
+        if (!allMatches.length) {
+          out.innerHTML =
+            '<div class="empty-state"><div class="big">&#128269;</div><p>No opportunities in the database yet.</p></div>';
+          return;
+        }
         const type = document.getElementById("typeFilter").value;
         const hideZero = document.getElementById("hideZero").checked;
 
@@ -195,10 +139,9 @@
           <div class="col-4 stat"><div class="num">${soon}</div><div class="lbl">Relevant and closing this week</div></div>
         </div></div>`;
 
-        const out = document.getElementById("results");
         if (!visible.length) {
           out.innerHTML =
-            '<div class="empty-state"><div class="big">&#129320;</div><p>No matches for these filters.</p><p class="small">Try untick "Hide 0% skill fit" or add more skills to your profile.</p></div>';
+            '<div class="empty-state"><div class="big">&#129320;</div><p>No matches for these filters.</p><p class="small">Untick "Hide 0% skill fit" to see everything.</p></div>';
           return;
         }
 
@@ -243,15 +186,14 @@
               <div class="progress-bar bg-${level}" style="width: ${pct}%"></div>
             </div>
             <p class="small text-secondary mb-2">Skill fit ${Math.round(m.skill_score * 100)}% &nbsp;|&nbsp; Urgency ${Math.round(m.urgency_score * 100)}%</p>
-                        <div class="d-flex flex-wrap gap-1 align-items-center">${chips}${btn}</div>
+            <div class="d-flex flex-wrap gap-1 align-items-center">${chips}${btn}</div>
           </div></div>`;
           })
           .join("");
       }
 
-      const saved = localStorage.getItem("studentId");
-      if (saved) {
-        document.getElementById("studentId").value = saved;
+      if (requireLogin()) {
+        renderNav("matches");
         loadMatches();
       }
     </script>

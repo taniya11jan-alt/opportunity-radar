@@ -14,20 +14,7 @@
     <main class="container py-4" style="max-width: 900px">
       <div class="topbar">
         <a class="logo" href="index.html">Opportunity<span>Radar</span></a>
-        <ul class="nav nav-pills">
-          <li class="nav-item">
-            <a class="nav-link" href="index.html">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="signup.html">Sign Up</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="matches.html">Find Matches</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" href="admin.html">Admin</a>
-          </li>
-        </ul>
+        <ul class="nav nav-pills" id="nav"></ul>
       </div>
 
       <section class="hero small">
@@ -68,6 +55,14 @@
                 />
               </div>
               <div class="mb-3">
+                <input
+                  type="text"
+                  id="oppLink"
+                  class="form-control"
+                  placeholder="Link (optional, starts with https://)"
+                />
+              </div>
+              <div class="mb-3">
                 <label for="oppDeadline" class="form-label small text-secondary"
                   >Deadline</label
                 >
@@ -97,8 +92,8 @@
 
     <footer>Opportunity Radar &middot; Minor project</footer>
 
+    <script src="auth.js"></script>
     <script>
-      const API = "http://127.0.0.1:8000";
       const TYPE_COLORS = {
         hackathon: "primary",
         internship: "info",
@@ -106,19 +101,6 @@
         contest: "success",
       };
 
-      function esc(s) {
-        return String(s ?? "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
-      }
       function show(el, kind, text) {
         el.innerHTML = `<div class="alert alert-${kind} mb-0"></div>`;
         el.firstChild.textContent = text;
@@ -155,18 +137,29 @@
         const title = document.getElementById("oppTitle").value;
         const type = document.getElementById("oppType").value;
         const skills = document.getElementById("oppSkills").value;
+        const link = document.getElementById("oppLink").value;
         const deadline = document.getElementById("oppDeadline").value;
         const resultEl = document.getElementById("addOppResult");
 
         if (!title || !skills || !deadline) {
-          show(resultEl, "warning", "Please fill in all fields.");
+          show(
+            resultEl,
+            "warning",
+            "Please fill in title, skills and deadline.",
+          );
           return;
         }
         show(resultEl, "secondary", "Adding...");
 
         try {
-          const params = new URLSearchParams({ title, type, skills, deadline });
-          const response = await fetch(`${API}/opportunities?${params}`, {
+          const params = new URLSearchParams({
+            title,
+            type,
+            skills,
+            deadline,
+            link,
+          });
+          const response = await authFetch(`/opportunities?${params}`, {
             method: "POST",
           });
           const data = await response.json();
@@ -178,13 +171,13 @@
             );
             return;
           }
-
           show(resultEl, "success", `Added "${data.title}" successfully!`);
-          document.getElementById("oppTitle").value = "";
-          document.getElementById("oppSkills").value = "";
-          document.getElementById("oppDeadline").value = "";
+          ["oppTitle", "oppSkills", "oppLink", "oppDeadline"].forEach(
+            (id) => (document.getElementById(id).value = ""),
+          );
           loadRecent();
         } catch (err) {
+          if (err.message === "Not logged in") return;
           show(
             resultEl,
             "danger",
@@ -193,7 +186,10 @@
         }
       }
 
-      loadRecent();
+      if (requireLogin(true)) {
+        renderNav("admin");
+        loadRecent();
+      }
     </script>
   </body>
 </html>

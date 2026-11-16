@@ -19,6 +19,8 @@ class Student(Base):
     email = Column(String)
     year = Column(String)
     skills = Column(String)
+    password_hash = Column(String, nullable=True)
+    is_admin = Column(Integer, default=0)
 
 
 class ReminderLog(Base):

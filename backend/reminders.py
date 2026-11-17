@@ -1,4 +1,5 @@
 import os
+import sys
 import smtplib
 from datetime import date, datetime
 from email.message import EmailMessage
@@ -19,8 +20,8 @@ GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 DRY_RUN = False        # True = print only, send nothing
 MIN_SKILL = 0.5       # only strong matches
 MAX_DAYS = 7          # only deadlines within this many days
-ONLY_EMAIL = "taniya06.yadav@gmail.com"   # your own address, used while testing
-
+ONLY_EMAIL = None
+SEND_ALL = "--send" in sys.argv   
 
 def days_left(deadline_str):
     try:
@@ -88,8 +89,8 @@ for s, matches in to_send:
     for o, skill, d in matches:
         print(f"   {o.title} | {d} day(s) | {round(skill * 100)}%")
 
-if not DRY_RUN and not ONLY_EMAIL:
-    raise SystemExit("Refusing to send to all students. Set ONLY_EMAIL for testing.")
+if not DRY_RUN and not ONLY_EMAIL and not SEND_ALL:
+    raise SystemExit("Preview only. Run with --send to email everyone, or set ONLY_EMAIL to test one address.")
 
 if DRY_RUN:
     print(f"\nDRY_RUN is on: {len(to_send)} student(s) would be emailed, nothing sent.")

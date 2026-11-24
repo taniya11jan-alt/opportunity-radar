@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 from models import Opportunity, Student
 from matching import calculate_final_score
-from auth import hash_password, verify_password, make_token, read_token
+from auth import hash_password, verify_password, make_token, read_token, read_unsub_token
+from fastapi.responses import HTMLResponse
 
 Base.metadata.create_all(bind=engine)
 
@@ -46,6 +47,7 @@ class SignupIn(BaseModel):
     year: str
     skills: str
     password: str
+    email_opt_in: bool = True
 
 
 class LoginIn(BaseModel):
@@ -61,7 +63,7 @@ def read_root():
 @app.post("/signup")
 def signup(data: SignupIn, db: Session = Depends(get_db)):
     email = data.email.strip().lower()
-    skill_list = [s.strip() for s in data.skills.split(",") if s.strip()]
+    skill_list = [skill.strip() for skill in data.skills.split(",") if skill.strip()] 
 
     if not data.name.strip() or "@" not in email:
         raise HTTPException(status_code=400, detail="Please enter a name and a valid email.")
@@ -72,12 +74,23 @@ def signup(data: SignupIn, db: Session = Depends(get_db)):
     if db.query(Student).filter(Student.email == email).first():
         raise HTTPException(status_code=409, detail="This email is already registered. Please log in.")
 
-    s = Student(name=data.name.strip(), email=email, year=data.year.strip(),
-                skills=",".join(skill_list), password_hash=hash_password(data.password), is_admin=0)
-    db.add(s)
+    student = Student(
+        name=data.name.strip(),
+        email=email,
+        year=data.year.strip(),
+        skills=",".join(skill_list),
+        password_hash=hash_password(data.password),
+        is_admin=0,
+        email_opt_in=1 if data.email_opt_in else 0,
+    )
+    db.add(student)
     db.commit()
-    db.refresh(s)
-    return {"token": make_token(s.id), "name": s.name, "is_admin": bool(s.is_admin)}
+    db.refresh(student)
+    return {
+        "token": make_token(student.id),
+        "name": student.name,
+        "is_admin": bool(student.is_admin),
+    }
 
 
 @app.post("/login")
@@ -86,6 +99,7 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
     if not s or not s.password_hash or not verify_password(data.password, s.password_hash):
         raise HTTPException(status_code=401, detail="Wrong email or password.")
     return {"token": make_token(s.id), "name": s.name, "is_admin": bool(s.is_admin)}
+
 
 class ProfileIn(BaseModel):
     name: str
@@ -155,3 +169,26 @@ def my_matches(student: Student = Depends(current_student), db: Session = Depend
         })
     results.sort(key=lambda x: x["match_score"], reverse=True)
     return {"student": student.name, "matches": results}
+
+@app.get("/unsubscribe", response_class=HTMLResponse)
+def unsubscribe(t: str, db: Session = Depends(get_db)):
+    sid = read_unsub_token(t)
+    s = db.query(Student).filter(Student.id == sid).first() if sid else None
+    if not s:
+        return HTMLResponse("<h3>This unsubscribe link is not valid.</h3>", status_code=400)
+    s.email_opt_in = 0
+    db.commit()
+    return HTMLResponse("<h3>You have been unsubscribed from reminder emails.</h3>"
+                        "<p>You can turn them back on from the My Matches page.</p>")
+
+
+@app.get("/me/email-pref")
+def get_pref(student: Student = Depends(current_student)):
+    return {"email_opt_in": student.email_opt_in != 0}
+
+
+@app.put("/me/email-pref")
+def set_pref(opt_in: bool, student: Student = Depends(current_student), db: Session = Depends(get_db)):
+    student.email_opt_in = 1 if opt_in else 0
+    db.commit()
+    return {"email_opt_in": opt_in}

@@ -70,6 +70,17 @@
                 >
                 <input type="password" id="password" class="form-control" />
               </div>
+              <div class="form-check mb-3">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="optin"
+                  checked
+                />
+                <label class="form-check-label small" for="optin"
+                  >Email me reminders about strong matches closing soon</label
+                >
+              </div>
               <button class="btn btn-primary w-100" onclick="signup()">
                 Create my account
               </button>
@@ -139,6 +150,7 @@
           show("warning", "Please fill in all fields.");
           return;
         }
+        body.email_opt_in = document.getElementById("optin").checked;
         show("secondary", "Creating your account...");
         try {
           const res = await fetch(API + "/signup", {

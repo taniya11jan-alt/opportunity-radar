@@ -14,7 +14,7 @@ JOBS = [
     ("Devpost", ["devpost_scraper.py"]),
     ("Unstop hackathons", ["unstop_scraper.py", "hackathon"]),
     ("Unstop internships", ["unstop_scraper.py", "internship"]),
-    ("Codeforces", ["codeforces_scraper.py"]),
+    ("Codeforces", ["codeforces_scraper.py"]),    ("Reminders", ["..\\backend\\reminders.py", "--send", "--all"]),
 ]
 
 

@@ -1,6 +1,6 @@
 import os
-import sys
 import smtplib
+import sys
 from datetime import date, datetime
 from email.message import EmailMessage
 
@@ -9,19 +9,32 @@ from dotenv import load_dotenv
 from database import SessionLocal, engine, Base
 from models import Opportunity, Student, ReminderLog
 from matching import calculate_skill_score
+try:
+    from auth import make_unsub_token
+except ImportError:
+    make_unsub_token = None
 
 Base.metadata.create_all(bind=engine)
-
 load_dotenv()
 GMAIL_USER = os.getenv("GMAIL_USER")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
-# ---------- Settings ----------
-DRY_RUN = False        # True = print only, send nothing
-MIN_SKILL = 0.5       # only strong matches
-MAX_DAYS = 7          # only deadlines within this many days
-ONLY_EMAIL = None
-SEND_ALL = "--send" in sys.argv   
+MIN_SKILL = 0.5
+MAX_DAYS = 7
+MAX_EMAILS_PER_RUN = 100                 
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+
+
+args = sys.argv[1:]
+SEND = "--send" in args
+ALL = "--all" in args
+TO = args[args.index("--to") + 1].strip().lower() if "--to" in args else None
+
+if SEND and not TO and not ALL:
+    raise SystemExit("Refusing to send. Add --to your@email.com or --all.")
+if SEND and make_unsub_token is None:
+    raise SystemExit("Cannot send reminders: auth.make_unsub_token is unavailable.")
+
 
 def days_left(deadline_str):
     try:
@@ -40,7 +53,9 @@ def build_message(student, matches):
         if opp.link:
             lines.append(f"  {opp.link}")
     lines += ["", "Good luck!", "Opportunity Radar"]
-
+    if make_unsub_token is not None:
+        unsub = f"{BASE_URL}/unsubscribe?t={make_unsub_token(student.id)}"
+        lines += ["", f"Don't want these emails? Unsubscribe: {unsub}"]
     msg = EmailMessage()
     msg["Subject"] = f"{len(matches)} opportunities closing soon"
     msg["From"] = GMAIL_USER
@@ -50,38 +65,26 @@ def build_message(student, matches):
 
 
 db = SessionLocal()
-
-# One student per email address
-seen_emails = set()
-students = []
-for s in db.query(Student).all():
-    key = s.email.strip().lower()
-    if key in seen_emails:
-        continue
-    seen_emails.add(key)
-    students.append(s)
-
+students = db.query(Student).all()
 opportunities = db.query(Opportunity).all()
-
-# (student_id, opportunity_id) pairs that were already emailed
 already_sent = {(r.student_id, r.opportunity_id) for r in db.query(ReminderLog).all()}
 
 to_send = []
 for s in students:
-    if ONLY_EMAIL and s.email.strip().lower() != ONLY_EMAIL.lower():
+    if s.email_opt_in == 0:
+        continue
+    if TO and s.email.strip().lower() != TO:
         continue
     matches = []
     for o in opportunities:
         d = days_left(o.deadline)
-        if d is None or d < 0 or d > MAX_DAYS:
-            continue
-        if (s.id, o.id) in already_sent:
+        if d is None or d < 0 or d > MAX_DAYS or (s.id, o.id) in already_sent:
             continue
         skill = calculate_skill_score(s.skills, o.skills)
         if skill >= MIN_SKILL:
             matches.append((o, skill, d))
     if matches:
-        matches.sort(key=lambda m: (m[2], -m[1]))   # soonest first
+        matches.sort(key=lambda m: (m[2], -m[1]))
         to_send.append((s, matches))
 
 for s, matches in to_send:
@@ -89,11 +92,8 @@ for s, matches in to_send:
     for o, skill, d in matches:
         print(f"   {o.title} | {d} day(s) | {round(skill * 100)}%")
 
-if not DRY_RUN and not ONLY_EMAIL and not SEND_ALL:
-    raise SystemExit("Preview only. Run with --send to email everyone, or set ONLY_EMAIL to test one address.")
-
-if DRY_RUN:
-    print(f"\nDRY_RUN is on: {len(to_send)} student(s) would be emailed, nothing sent.")
+if not SEND:
+    print(f"\nPreview only: {len(to_send)} student(s) would be emailed. Nothing sent.")
 elif not GMAIL_USER or not GMAIL_APP_PASSWORD:
     print("Missing GMAIL_USER or GMAIL_APP_PASSWORD in .env")
 else:
@@ -105,5 +105,4 @@ else:
                 db.add(ReminderLog(student_id=s.id, opportunity_id=o.id, sent_on=date.today()))
             db.commit()
             print(f"Sent to {s.email}")
-
 db.close()

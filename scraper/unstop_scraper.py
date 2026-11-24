@@ -16,7 +16,7 @@ from models import Opportunity
 from skill_map import expand_skills
 
 # ---------- Settings ----------
-OPP_TYPE = "internship"      
+OPP_TYPE = sys.argv[1] if len(sys.argv) > 1 else "internship"      
 HEADLESS = False
 DRY_RUN = False
 

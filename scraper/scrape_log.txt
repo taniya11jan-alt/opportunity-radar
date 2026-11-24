@@ -1,0 +1,23 @@
+2026-11-24 12:21:06 | Devpost: OK | Saved 2 new opportunities. Total time: 27.9s
+2026-11-24 12:21:09 | Unstop hackathons: FAILED | (no output)
+2026-11-24 12:21:09 |    error:   File "C:\Users\Dj Vikash\opportunity-radar\scraper\unstop_scraper.py", line 23, in <module>
+    URL = f"https://unstop.com/{'internship' if OPP_TYPE == 'internship' else 'hackathons'}?oppstatus=open"
+                                                ^^^^^^^^
+NameError: name 'OPP_TYPE' is not defined
+2026-11-24 12:21:11 | Unstop internships: FAILED | (no output)
+2026-11-24 12:21:11 |    error:   File "C:\Users\Dj Vikash\opportunity-radar\scraper\unstop_scraper.py", line 23, in <module>
+    URL = f"https://unstop.com/{'internship' if OPP_TYPE == 'internship' else 'hackathons'}?oppstatus=open"
+                                                ^^^^^^^^
+NameError: name 'OPP_TYPE' is not defined
+2026-11-24 12:21:13 | Codeforces: OK | Saved 3 new contests.
+2026-11-24 12:21:13 | Cleanup: removed 7 expired listings
+2026-11-24 12:26:14 | Devpost: OK | Saved 0 new opportunities. Total time: 22.8s
+2026-11-24 12:26:30 | Unstop hackathons: OK | Saved 0 new hackathons.
+2026-11-24 12:26:48 | Unstop internships: OK | Saved 0 new internships.
+2026-11-24 12:26:51 | Codeforces: OK | Saved 0 new contests.
+2026-11-24 12:26:51 | Cleanup: removed 0 expired listings
+2026-11-24 12:33:15 | Devpost: OK | Saved 0 new opportunities. Total time: 20.1s
+2026-11-24 12:33:34 | Unstop hackathons: OK | Saved 0 new hackathons.
+2026-11-24 12:33:48 | Unstop internships: OK | Saved 0 new internships.
+2026-11-24 12:33:50 | Codeforces: OK | Saved 0 new contests.
+2026-11-24 12:33:50 | Cleanup: removed 0 expired listings

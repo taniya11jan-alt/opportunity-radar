@@ -24,7 +24,11 @@ SKILL_MAP = {
     "artificial intelligence": ["python", "machine learning", "ai"],
     "generative ai": ["python", "machine learning", "llm"],
     "hr": ["communication", "recruitment"],
-    "research": ["research", "excel"],
+    "research": ["research", "excel"],    "python": ["python", "programming"],
+    "php": ["php", "mysql", "web development"],
+    "react native": ["react native", "javascript", "android"],
+    "content creation": ["content writing", "social media"],
+    "graphic designer": ["design", "figma", "photoshop"],
 }
 
 

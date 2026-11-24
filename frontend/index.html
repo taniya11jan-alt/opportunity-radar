@@ -22,8 +22,9 @@
           Stop missing the opportunities <span class="grad">meant for you</span>
         </h1>
         <p>
-          One place for hackathons, internships and contests, ranked by your
-          skills and their deadlines.
+          Hackathons, internships and coding contests are scattered across many
+          sites. Opportunity Radar collects them in one place and ranks them by
+          how well they fit your skills and how soon they close.
         </p>
         <div class="d-flex flex-wrap gap-2 mt-4" id="heroButtons"></div>
       </section>
@@ -57,7 +58,8 @@
               <div class="step-num">1</div>
               <h3 class="h6">Tell us your skills</h3>
               <p class="text-secondary small mb-0">
-                Sign up with a few skills, like python, sql or web development.
+                Create an account with a few skills, like python, sql or web
+                development.
               </p>
             </div>
           </div>
@@ -107,8 +109,8 @@
       renderNav("home");
 
       // Hero buttons depend on whether the user is logged in
-      document.getElementById("heroButtons").innerHTML = getSession()
-        ? '<a href="matches.html" class="btn btn-accent btn-lg">See my matches</a>'
+      document.getElementById("heroButtons").innerHTML = getToken()
+        ? '<a href="matches.html" class="btn btn-accent btn-lg">Go to my matches</a>'
         : '<a href="signup.html" class="btn btn-accent btn-lg">Get started</a>' +
           '<a href="login.html" class="btn btn-ghost btn-lg">Log in</a>';
 
@@ -117,7 +119,9 @@
         t.setHours(0, 0, 0, 0);
         return Math.round((new Date(d + "T00:00:00") - t) / 86400000);
       }
-      fetch(`${API}/opportunities`)
+
+      // Live stats from the public opportunities endpoint
+      fetch(API + "/opportunities")
         .then((r) => r.json())
         .then((list) => {
           const open = list.filter((o) => daysLeft(o.deadline) >= 0);

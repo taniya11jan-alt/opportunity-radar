@@ -20,12 +20,17 @@
       <section class="hero small">
         <h1>Admin panel</h1>
         <p>
-          Add listings the scrapers miss, such as college events or
-          WhatsApp-forwarded opportunities.
+          Add listings the scrapers miss, such as college events or forwarded
+          opportunities.
         </p>
       </section>
 
-      <div class="row g-3">
+      <div id="denied" class="alert alert-warning d-none">
+        This page is for admins only.
+        <a href="matches.html" class="alert-link">Back to my matches</a>
+      </div>
+
+      <div class="row g-3" id="panel">
         <div class="col-md-5">
           <div class="card">
             <div class="card-body p-4">
@@ -55,18 +60,18 @@
                 />
               </div>
               <div class="mb-3">
-                <input
-                  type="text"
-                  id="oppLink"
-                  class="form-control"
-                  placeholder="Link (optional, starts with https://)"
-                />
-              </div>
-              <div class="mb-3">
                 <label for="oppDeadline" class="form-label small text-secondary"
                   >Deadline</label
                 >
                 <input type="date" id="oppDeadline" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <input
+                  type="url"
+                  id="oppLink"
+                  class="form-control"
+                  placeholder="Link (optional), https://..."
+                />
               </div>
               <button class="btn btn-primary w-100" onclick="addOpportunity()">
                 Add opportunity
@@ -90,10 +95,15 @@
       </div>
     </main>
 
-    <footer>Opportunity Radar &middot; Minor project</footer>
-
     <script src="auth.js"></script>
     <script>
+      if (!getToken()) location.href = "login.html";
+      renderNav("admin");
+      if (!isAdmin()) {
+        document.getElementById("denied").classList.remove("d-none");
+        document.getElementById("panel").classList.add("d-none");
+      }
+
       const TYPE_COLORS = {
         hackathon: "primary",
         internship: "info",
@@ -101,22 +111,21 @@
         contest: "success",
       };
 
-      function show(el, kind, text) {
-        el.innerHTML = `<div class="alert alert-${kind} mb-0"></div>`;
-        el.firstChild.textContent = text;
+      function show(kind, text) {
+        document.getElementById("addOppResult").innerHTML =
+          `<div class="alert alert-${kind} mb-0">${esc(text)}</div>`;
       }
 
       async function loadRecent() {
         const box = document.getElementById("recent");
         try {
-          const list = await (await fetch(`${API}/opportunities`)).json();
+          const list = await (await fetch(API + "/opportunities")).json();
           document.getElementById("count").textContent =
             `(${list.length} total)`;
-          const latest = list
+          box.innerHTML = list
             .slice()
             .sort((a, b) => b.id - a.id)
-            .slice(0, 8);
-          box.innerHTML = latest
+            .slice(0, 8)
             .map(
               (o) => `
           <div class="d-flex justify-content-between align-items-center border-bottom py-2 gap-2">
@@ -137,20 +146,13 @@
         const title = document.getElementById("oppTitle").value;
         const type = document.getElementById("oppType").value;
         const skills = document.getElementById("oppSkills").value;
-        const link = document.getElementById("oppLink").value;
         const deadline = document.getElementById("oppDeadline").value;
-        const resultEl = document.getElementById("addOppResult");
-
+        const link = document.getElementById("oppLink").value;
         if (!title || !skills || !deadline) {
-          show(
-            resultEl,
-            "warning",
-            "Please fill in title, skills and deadline.",
-          );
+          show("warning", "Please fill in title, skills and deadline.");
           return;
         }
-        show(resultEl, "secondary", "Adding...");
-
+        show("secondary", "Adding...");
         try {
           const params = new URLSearchParams({
             title,
@@ -159,37 +161,28 @@
             deadline,
             link,
           });
-          const response = await authFetch(`/opportunities?${params}`, {
-            method: "POST",
-          });
-          const data = await response.json();
-          if (!response.ok) {
+          const res = await api("/opportunities?" + params, { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) {
             show(
-              resultEl,
               "danger",
-              data.detail || "Could not add opportunity.",
+              typeof data.detail === "string"
+                ? data.detail
+                : "Could not add opportunity.",
             );
             return;
           }
-          show(resultEl, "success", `Added "${data.title}" successfully!`);
-          ["oppTitle", "oppSkills", "oppLink", "oppDeadline"].forEach(
+          show("success", `Added "${data.title}" successfully!`);
+          ["oppTitle", "oppSkills", "oppDeadline", "oppLink"].forEach(
             (id) => (document.getElementById(id).value = ""),
           );
           loadRecent();
-        } catch (err) {
-          if (err.message === "Not logged in") return;
-          show(
-            resultEl,
-            "danger",
-            "Failed to add opportunity. Is the backend running?",
-          );
+        } catch (e) {
+          show("danger", "Failed to add opportunity. Is the backend running?");
         }
       }
 
-      if (requireLogin(true)) {
-        renderNav("admin");
-        loadRecent();
-      }
+      if (isAdmin()) loadRecent();
     </script>
   </body>
 </html>

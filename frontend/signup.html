@@ -42,18 +42,6 @@
                   id="email"
                   class="form-control"
                   placeholder="you@example.com"
-                  autocomplete="email"
-                />
-              </div>
-              <div class="mb-3">
-                <label class="form-label small text-secondary"
-                  >Password (at least 6 characters)</label
-                >
-                <input
-                  type="password"
-                  id="password"
-                  class="form-control"
-                  autocomplete="new-password"
                 />
               </div>
               <div class="mb-3">
@@ -76,11 +64,17 @@
                   placeholder="python, sql, machine learning"
                 />
               </div>
+              <div class="mb-3">
+                <label class="form-label small text-secondary"
+                  >Password (6+ characters)</label
+                >
+                <input type="password" id="password" class="form-control" />
+              </div>
               <button class="btn btn-primary w-100" onclick="signup()">
-                Create my profile
+                Create my account
               </button>
-              <div id="signupResult" class="mt-3"></div>
-              <p class="small text-secondary text-center mt-3 mb-0">
+              <div id="result" class="mt-3"></div>
+              <p class="small text-secondary mt-3 mb-0">
                 Already registered? <a href="login.html">Log in</a>
               </p>
             </div>
@@ -123,41 +117,42 @@
       </div>
     </main>
 
-    <footer>Opportunity Radar &middot; Minor project</footer>
-
     <script src="auth.js"></script>
     <script>
-      if (getSession()) location.href = "matches.html";
       renderNav("signup");
+      if (getToken()) location.href = "matches.html";
 
       function show(kind, text) {
-        const el = document.getElementById("signupResult");
-        el.innerHTML = `<div class="alert alert-${kind} mb-0"></div>`;
-        el.firstChild.textContent = text;
+        document.getElementById("result").innerHTML =
+          `<div class="alert alert-${kind} mb-0">${esc(text)}</div>`;
       }
 
       async function signup() {
-        const name = document.getElementById("name").value.trim();
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
-        const year = document.getElementById("year").value.trim();
-        const skills = document.getElementById("skills").value.trim();
-
-        if (!name || !email || !password || !year || !skills) {
+        const body = {
+          name: document.getElementById("name").value,
+          email: document.getElementById("email").value,
+          year: document.getElementById("year").value,
+          skills: document.getElementById("skills").value,
+          password: document.getElementById("password").value,
+        };
+        if (Object.values(body).some((v) => !v)) {
           show("warning", "Please fill in all fields.");
           return;
         }
-        show("secondary", "Creating your profile...");
-
+        show("secondary", "Creating your account...");
         try {
-          const res = await fetch(`${API}/signup`, {
+          const res = await fetch(API + "/signup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, year, skills, password }),
+            body: JSON.stringify(body),
           });
           const data = await res.json();
           if (!res.ok) {
-            show("danger", data.detail || "Signup failed.");
+            const msg =
+              typeof data.detail === "string"
+                ? data.detail
+                : "Please check your details.";
+            show("danger", msg);
             return;
           }
           saveSession(data);

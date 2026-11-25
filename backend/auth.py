@@ -36,8 +36,9 @@ def read_token(token: str):
     except Exception:
         return None
 
-    def make_unsub_token(student_id: int) -> str:
-        sig = hmac.new(SECRET.encode(), f"unsub.{student_id}".encode(), hashlib.sha256).hexdigest()
+
+def make_unsub_token(student_id: int) -> str:
+    sig = hmac.new(SECRET.encode(), f"unsub.{student_id}".encode(), hashlib.sha256).hexdigest()
     return f"{student_id}.{sig}"
 
 

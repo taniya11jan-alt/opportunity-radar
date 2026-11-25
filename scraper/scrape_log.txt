@@ -21,3 +21,10 @@ NameError: name 'OPP_TYPE' is not defined
 2026-11-24 12:33:48 | Unstop internships: OK | Saved 0 new internships.
 2026-11-24 12:33:50 | Codeforces: OK | Saved 0 new contests.
 2026-11-24 12:33:50 | Cleanup: removed 0 expired listings
+2026-11-25 11:56:01 | Devpost: OK | Saved 0 new opportunities. Total time: 25.4s
+2026-11-25 11:56:17 | Unstop hackathons: OK | Saved 7 new hackathons.
+2026-11-25 11:56:34 | Unstop internships: OK | Saved 16 new internships.
+2026-11-25 11:56:39 | Codeforces: OK | Saved 0 new contests.
+2026-11-25 11:56:40 | Reminders: FAILED | (no output)
+2026-11-25 11:56:40 |    error: Cannot send reminders: auth.make_unsub_token is unavailable.
+2026-11-25 11:56:40 | Cleanup: removed 3 expired listings

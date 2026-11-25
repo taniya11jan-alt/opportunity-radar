@@ -18,21 +18,27 @@
       </div>
 
       <section class="hero small">
-        <h1>Your profile</h1>
-        <p>Update your skills any time. Your matches change with them.</p>
+        <h1 id="heroTitle">Your profile</h1>
+        <p>
+          Keep your skills up to date. They decide which opportunities rank
+          first.
+        </p>
       </section>
 
-      <div class="row justify-content-center">
+      <div class="row g-3">
         <div class="col-md-7">
           <div class="card">
             <div class="card-body p-4">
-              <div class="mb-3">
-                <label class="form-label small text-secondary">Email</label>
-                <input type="email" id="email" class="form-control" disabled />
-              </div>
+              <h2 class="h6 mb-3">Edit details</h2>
               <div class="mb-3">
                 <label class="form-label small text-secondary">Full name</label>
                 <input type="text" id="name" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label small text-secondary"
+                  >Email (cannot be changed)</label
+                >
+                <input type="email" id="email" class="form-control" disabled />
               </div>
               <div class="mb-3">
                 <label class="form-label small text-secondary">Year</label>
@@ -42,11 +48,17 @@
                 <label class="form-label small text-secondary"
                   >Skills (at least 2, comma-separated)</label
                 >
-                <input type="text" id="skills" class="form-control" />
+                <input
+                  type="text"
+                  id="skills"
+                  class="form-control"
+                  oninput="preview()"
+                />
+                <div id="chips" class="d-flex flex-wrap gap-1 mt-2"></div>
               </div>
               <div class="mb-3">
                 <label class="form-label small text-secondary"
-                  >New password (leave empty to keep the current one)</label
+                  >New password (leave blank to keep the current one)</label
                 >
                 <input
                   type="password"
@@ -55,36 +67,92 @@
                   autocomplete="new-password"
                 />
               </div>
-              <button class="btn btn-primary w-100" onclick="saveProfile()">
+              <button class="btn btn-primary w-100" onclick="save()">
                 Save changes
               </button>
               <div id="result" class="mt-3"></div>
             </div>
           </div>
         </div>
+
+        <div class="col-md-5">
+          <div class="card mb-3">
+            <div class="card-body p-4">
+              <h2 class="h6 mb-3">Email reminders</h2>
+              <div class="form-check form-switch mb-2">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="optin"
+                  onchange="savePref()"
+                />
+                <label class="form-check-label small" for="optin"
+                  >Email me about strong matches closing soon</label
+                >
+              </div>
+              <p class="small text-secondary mb-0">
+                Sent once a day, only for matches of 50% or more closing within
+                a week.
+              </p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body p-4">
+              <h2 class="h6 mb-3">Account</h2>
+              <p class="small mb-1">
+                <span class="text-secondary">Role:</span>
+                <span id="role">Student</span>
+              </p>
+              <button
+                class="btn btn-outline-secondary btn-sm mt-2"
+                onclick="logout()"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 
-    <footer>Opportunity Radar &middot; Minor project</footer>
-
     <script src="auth.js"></script>
     <script>
+      if (!getToken()) location.href = "login.html";
+      renderNav("profile");
+
       function show(kind, text) {
-        const el = document.getElementById("result");
-        el.innerHTML = `<div class="alert alert-${kind} mb-0"></div>`;
-        el.firstChild.textContent = text;
+        document.getElementById("result").innerHTML =
+          `<div class="alert alert-${kind} mb-0">${esc(text)}</div>`;
       }
 
-      async function loadProfile() {
+      function preview() {
+        document.getElementById("chips").innerHTML = document
+          .getElementById("skills")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => `<span class="badge rounded-pill chip">${esc(s)}</span>`)
+          .join(" ");
+      }
+
+      async function load() {
         try {
-          const res = await authFetch("/me");
-          const d = await res.json();
-          document.getElementById("email").value = d.email;
-          document.getElementById("name").value = d.name;
-          document.getElementById("year").value = d.year;
-          document.getElementById("skills").value = d.skills;
+          const d = await (await api("/me")).json();
+          document.getElementById("name").value = d.name || "";
+          document.getElementById("email").value = d.email || "";
+          document.getElementById("year").value = d.year || "";
+          document.getElementById("skills").value = Array.isArray(d.skills)
+            ? d.skills.join(", ")
+            : d.skills || "";
+          document.getElementById("heroTitle").textContent =
+            "Hi " + (d.name || "there");
+          document.getElementById("role").textContent = isAdmin()
+            ? "Admin"
+            : "Student";
+          preview();
+          const p = await (await api("/me/email-pref")).json();
+          document.getElementById("optin").checked = p.email_opt_in;
         } catch (e) {
-          if (e.message === "Not logged in") return;
           show(
             "danger",
             "Could not load your profile. Is the backend running?",
@@ -92,47 +160,54 @@
         }
       }
 
-      async function saveProfile() {
-        const name = document.getElementById("name").value.trim();
-        const year = document.getElementById("year").value.trim();
-        const skills = document.getElementById("skills").value.trim();
-        const password = document.getElementById("password").value;
-
-        if (!name || !year || !skills) {
-          show("warning", "Name, year and skills cannot be empty.");
+      async function save() {
+        const body = {
+          name: document.getElementById("name").value.trim(),
+          year: document.getElementById("year").value.trim(),
+          skills: document.getElementById("skills").value.trim(),
+          password: document.getElementById("password").value || null,
+        };
+        if (!body.name || !body.year || !body.skills) {
+          show("warning", "Name, year and skills are required.");
           return;
         }
         show("secondary", "Saving...");
         try {
-          const res = await authFetch("/me", {
+          const res = await api("/me", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name,
-              year,
-              skills,
-              password: password || null,
-            }),
+            body: JSON.stringify(body),
           });
           const data = await res.json();
           if (!res.ok) {
-            show("danger", data.detail || "Could not save changes.");
+            show(
+              "danger",
+              typeof data.detail === "string"
+                ? data.detail
+                : "Please check your details.",
+            );
             return;
           }
-          localStorage.setItem("name", data.name);
+          localStorage.setItem("name", body.name);
           document.getElementById("password").value = "";
           renderNav("profile");
-          show("success", "Saved. Your matches now use your updated skills.");
+          show(
+            "success",
+            "Profile saved. Your matches now use the new skills.",
+          );
         } catch (e) {
-          if (e.message === "Not logged in") return;
           show("danger", "Could not save. Is the backend running?");
         }
       }
 
-      if (requireLogin()) {
-        renderNav("profile");
-        loadProfile();
+      async function savePref() {
+        await api(
+          "/me/email-pref?opt_in=" + document.getElementById("optin").checked,
+          { method: "PUT" },
+        );
       }
+
+      load();
     </script>
   </body>
 </html>

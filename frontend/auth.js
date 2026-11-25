@@ -33,6 +33,7 @@ function esc(s) {
 function renderNav(active) {
   const items = [["index.html", "Home", "home"]];
   if (getToken()) items.push(["matches.html", "My Matches", "matches"]);
+  if (getToken()) items.push(["profile.html", "Profile", "profile"]);
   if (getToken() && isAdmin()) items.push(["admin.html", "Admin", "admin"]);
   if (!getToken()) {
     items.push(

@@ -9,7 +9,7 @@ Opportunities are scattered across platforms such as Devpost, Unstop and Codefor
 ## How it works
 
 1. Scrapers collect live listings from three sources and store them in one database.
-2. Students create an account and list their skills.
+2. Students create an account, list their skills, and can edit them later on the profile page.
 3. Every opportunity gets a score: **70% skill fit + 30% deadline urgency**.
 4. Skill fit compares the student's skills with the opportunity's skills using substring matching, so "machine learning" matches "Machine Learning/AI".
 5. Results are ranked and each card shows its skill and urgency breakdown, so no ranking is a black box.
@@ -19,6 +19,7 @@ Opportunities are scattered across platforms such as Devpost, Unstop and Codefor
 
 - Sign up and log in (salted PBKDF2 password hashes, signed expiring tokens)
 - Personalised, ranked matches with type filters and direct "View & apply" links
+- Profile page where students update their name, year, skills and password, and switch email reminders on or off
 - Live scrapers for Devpost and Unstop (Selenium) and Codeforces (official API)
 - Duplicate detection, title and skill cleaning, and removal of expired listings
 - Admin page, restricted on the server to admin accounts, for adding listings the scrapers miss
@@ -38,14 +39,15 @@ Opportunities are scattered across platforms such as Devpost, Unstop and Codefor
 ```
 opportunity-radar/
 ├── backend/
-│   ├── main.py            API endpoints
+│   ├── main.py            API endpoints (signup, login, profile, matches, unsubscribe)
 │   ├── models.py          Opportunity, Student, ReminderLog tables
 │   ├── database.py        Database connection
 │   ├── matching.py        Skill and urgency scoring
 │   ├── auth.py            Password hashing and tokens
 │   ├── skill_map.py       Role-to-skills mapping for internships
 │   ├── reminders.py       Email reminders
-│   └── make_admin.py      Make an account an admin
+│   ├── make_admin.py      Make an account an admin
+│   └── requirements.txt
 ├── scraper/
 │   ├── devpost_scraper.py
 │   ├── unstop_scraper.py
@@ -53,7 +55,7 @@ opportunity-radar/
 │   ├── run_all.py         Runs all scrapers, then reminders, then cleanup
 │   └── run_scrape.bat     Launcher used by Task Scheduler
 └── frontend/
-    ├── index.html  login.html  signup.html  matches.html  admin.html
+    ├── index.html  login.html  signup.html  matches.html  profile.html  admin.html
     ├── auth.js     style.css
 ```
 
